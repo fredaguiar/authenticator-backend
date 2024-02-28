@@ -31,7 +31,7 @@ const authenticate = (res: Response, user: TUser) => {
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     maxAge: TOKEN_EXPIRES_MS,
-  });
+  }); // TODO: secure: true
   return res.status(200).json({ name: user.name, email: user.email });
 };
 
