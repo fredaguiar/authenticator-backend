@@ -2,6 +2,11 @@
 
 A **React Native** delivery mobile app
 
+## Run in dev
+
+- npm run dev
+- npm run watch
+
 ## Tech stach
 
 - NodeJS, Typescript, MongoDB
