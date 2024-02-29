@@ -9,12 +9,13 @@ export const COOKIE_NAME = 'jid'; // 1hr
 export const PRIVATE_KEY = fs.readFileSync('keys/rsa.ppk', 'utf-8');
 export const PUBLIC_KEY = fs.readFileSync('keys/rsa.pub', 'utf-8');
 
+export type ApolloServerContext = { req: any; res: any };
+
 export const typeDefs = `#graphql
   type User {
     name: String!,
     email: String!,
     password: String!,
-    token: String,
   }
   input UserInput {
     name: String!,
@@ -51,8 +52,11 @@ export const resolvers = {
 
     async login(
       _: any,
-      { userInput: { email, password } }: { userInput: { email: string; password: string } }
+      { userInput: { email, password } }: { userInput: { email: string; password: string } },
+      context: ApolloServerContext
     ) {
+      const { req, res } = context;
+
       try {
         const user = await User.findOne<TUser>({ email }).exec();
         if (!user) {
@@ -66,7 +70,9 @@ export const resolvers = {
             extensions: { code: 'USER_INVALID_USERNAME_PASSWORD', email },
           });
         }
-        const token = generateToken(user);
+
+        const token = generateToken(user, res);
+
         return { name: user.name, email: user.email, token };
       } catch (err: any) {
         throw new GraphQLError('Login error', {
@@ -81,8 +87,11 @@ export const resolvers = {
       _: any,
       {
         userInput: { name, email, password },
-      }: { userInput: { name: string; email: string; password: string } }
+      }: { userInput: { name: string; email: string; password: string } },
+      context: ApolloServerContext
     ) {
+      const { req, res } = context;
+
       const existingUser = await User.findOne<TUser>({ email }).exec();
       if (existingUser) {
         throw new GraphQLError('User already exists', {
@@ -92,7 +101,7 @@ export const resolvers = {
 
       try {
         const newUser = await User.create<TUser>({ name, email, password });
-        const token = generateToken(newUser);
+        const token = generateToken(newUser, res);
         return { name: newUser.name, email: newUser.email, token };
       } catch (err: any) {
         throw new GraphQLError('Sign-up user error', {
@@ -103,10 +112,15 @@ export const resolvers = {
   },
 };
 
-const generateToken = (user: TUser) => {
+const generateToken = (user: TUser, res: any) => {
   const token = jwt.sign({ id: user._id }, PRIVATE_KEY, {
     expiresIn: TOKEN_EXPIRES_MS,
     algorithm: 'RS256',
+  });
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production', // HTTPS
   });
   return token;
 };

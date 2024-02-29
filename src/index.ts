@@ -1,42 +1,45 @@
-import express, { Express, Request, Response } from 'express';
+// npm install @apollo/server express graphql cors
 import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
-import bodyParser from 'body-parser';
-import cookieParser from 'cookie-parser';
+import { expressMiddleware } from '@apollo/server/express4';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import express from 'express';
+import http from 'http';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import router from './router';
-import authCheck from './middleware/authCheck';
-import { typeDefs, resolvers } from './graphql/schema';
+import cookieParser from 'cookie-parser';
+import { typeDefs, resolvers, ApolloServerContext } from './graphql/schema';
 
 dotenv.config();
 const PORT: number = parseInt(process.env.PORT as string, 10);
-const server = new ApolloServer({ typeDefs, resolvers });
 
-const app: Express = express();
-const port = process.env.PORT;
-const db = process.env.MONGO_URI as string;
+const app = express();
+const httpServer = http.createServer(app);
+const server = new ApolloServer<ApolloServerContext>({
+  typeDefs,
+  resolvers,
+  plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+});
 
-// app.use(bodyParser.json());
-// app.use(cookieParser());
-
-// app.get('/alive', (_req, res) => {
-//   res.send('I am alive');
-// });
-
-// app.use(router);
-// app.use(authCheck);
 (async () => {
-  try {
-    console.log('Connecting to DB ...');
-    await mongoose.connect(process.env.MONGO_URI as string);
-    console.log('DB Connected!');
-    console.log('Starting Apollo Server');
-    const { url } = await startStandaloneServer(server, {
-      listen: { port: PORT },
-    });
-    console.log('Started Apollo Server on port %d', PORT);
-  } catch (error) {
-    console.log('Server start error:', error);
-  }
+  console.log('Connecting to DB ...');
+  await mongoose.connect(process.env.MONGO_URI as string);
+  console.log('DB Connected!');
+
+  console.log('Starting Apollo Server');
+  await server.start();
+  console.log('Apollo Server Started!');
+
+  app.use(
+    '/',
+    cors<cors.CorsRequest>(),
+    express.json(),
+    cookieParser(),
+    expressMiddleware(server, {
+      context: async ({ req, res }: ApolloServerContext) => ({ req, res }),
+    })
+  );
+
+  await new Promise<void>((resolve) => httpServer.listen({ port: PORT }, resolve));
+  console.log(`🚀 Server ready at http://localhost:${PORT}/`);
 })();
