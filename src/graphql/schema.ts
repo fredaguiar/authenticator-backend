@@ -32,53 +32,27 @@ export const typeDefs = `#graphql
     password: String!,
   }
   type Query {
+    alive: String!
     getUserByEmail(email: String!): User
-    login(userInput: UserLogin!): UserAuthenticated
   }
   type Mutation {
     sigupUser(userInput: UserInput!): UserAuthenticated
+    login(userInput: UserLogin!): UserAuthenticated
   }
 `;
 
 export const resolvers = {
   Query: {
+    alive() {
+      return 'I am alive';
+    },
+
     async getUserByEmail(_: any, { email }: { email: String }) {
       const result = await User.findOne<TUser>({ email }).exec();
       if (!result) {
         return null;
       }
       return { name: result.name, email: result.email, password: result.password };
-    },
-
-    async login(
-      _: any,
-      { userInput: { email, password } }: { userInput: { email: string; password: string } },
-      context: ApolloServerContext
-    ) {
-      const { req, res } = context;
-
-      try {
-        const user = await User.findOne<TUser>({ email }).exec();
-        if (!user) {
-          throw new GraphQLError('User does not exist', {
-            extensions: { code: 'USER_NOT_EXIST', email },
-          });
-        }
-        const auth = await bcrypt.compare(password, user.password);
-        if (!auth) {
-          throw new GraphQLError('Invalid username or password', {
-            extensions: { code: 'USER_INVALID_USERNAME_PASSWORD', email },
-          });
-        }
-
-        const token = generateToken(user, res);
-
-        return { name: user.name, email: user.email, token };
-      } catch (err: any) {
-        throw new GraphQLError('Login error', {
-          extensions: { code: 'USER_LOGIN_ERROR', email },
-        });
-      }
     },
   },
 
@@ -106,6 +80,39 @@ export const resolvers = {
       } catch (err: any) {
         throw new GraphQLError('Sign-up user error', {
           extensions: { code: 'SIGUN_UP_ERROR', message: err.message },
+        });
+      }
+    },
+
+    async login(
+      _: any,
+      { userInput: { email, password } }: { userInput: { email: string; password: string } },
+      context: ApolloServerContext
+    ) {
+      const { req, res } = context;
+
+      console.log('email, password', email, password);
+
+      try {
+        const user = await User.findOne<TUser>({ email }).exec();
+        if (!user) {
+          throw new GraphQLError('User does not exist', {
+            extensions: { code: 'USER_NOT_EXIST', email },
+          });
+        }
+        const auth = await bcrypt.compare(password, user.password);
+        if (!auth) {
+          throw new GraphQLError('Invalid username or password', {
+            extensions: { code: 'USER_INVALID_USERNAME_PASSWORD', email },
+          });
+        }
+
+        const token = generateToken(user, res);
+
+        return { name: user.name, email: user.email, token };
+      } catch (err: any) {
+        throw new GraphQLError('Login error', {
+          extensions: { code: 'USER_LOGIN_ERROR', email },
         });
       }
     },

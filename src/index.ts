@@ -31,8 +31,8 @@ const server = new ApolloServer<ApolloServerContext>({
   console.log('Apollo Server Started!');
 
   app.use(
-    '/',
-    cors<cors.CorsRequest>(),
+    '/graphql',
+    // cors<cors.CorsRequest>({ origin: '*' }),
     express.json(),
     cookieParser(),
     expressMiddleware(server, {
@@ -41,5 +41,5 @@ const server = new ApolloServer<ApolloServerContext>({
   );
 
   await new Promise<void>((resolve) => httpServer.listen({ port: PORT }, resolve));
-  console.log(`🚀 Server ready at http://localhost:${PORT}/`);
+  console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
 })();
