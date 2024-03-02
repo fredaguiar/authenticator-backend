@@ -76,7 +76,7 @@ export const resolvers = {
         console.log('newUser NOW!!!!');
         const newUser = await User.create<TUser>({ name, email, password });
         console.log('newUser', newUser.password);
-        const token = generateToken(newUser, res);
+        const token = setToken(newUser, res);
         console.log('token', token);
         return { name: newUser.name, email: newUser.email, token };
       } catch (err: any) {
@@ -106,21 +106,23 @@ export const resolvers = {
           extensions: { code: 'USER_INVALID_USERNAME_PASSWORD', email },
         });
       }
-      const token = generateToken(user, res);
+      const token = setToken(user, res);
       return { name: user.name, email: user.email, token };
     },
   },
 };
 
-const generateToken = (user: TUser, res: any) => {
+const setToken = (user: TUser, res: any) => {
   const token = jwt.sign({ id: user._id }, PRIVATE_KEY, {
     expiresIn: TOKEN_EXPIRES_MS,
     algorithm: 'RS256',
   });
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production', // HTTPS
-  });
+  res.setHeader('Authorization', `Bearer ${token}`);
+
+  // res.cookie(COOKIE_NAME, token, {
+  //   httpOnly: true,
+  //   sameSite: 'strict',
+  //   secure: process.env.NODE_ENV === 'production', // HTTPS
+  // });
   return token;
 };
