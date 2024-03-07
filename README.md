@@ -1,6 +1,6 @@
 # Authentication Backend
 
-A **React Native** delivery mobile app
+A **React Native** authentication mobile app
 
 ## Run in dev
 

@@ -8,7 +8,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
-import { typeDefs, resolvers, ApolloServerContext } from './graphql/schema';
+import { typeDefs, resolvers, ApolloServerContext } from './graphql/userGql';
 
 dotenv.config();
 const PORT: number = parseInt(process.env.PORT as string, 10);

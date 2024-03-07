@@ -12,32 +12,32 @@ export const PUBLIC_KEY = fs.readFileSync('keys/rsa.pub', 'utf-8');
 export type ApolloServerContext = { req: any; res: any };
 
 export const typeDefs = `#graphql
-  type User {
-    name: String!,
-    email: String!,
-    password: String!,
-  }
   input UserInput {
-    name: String!,
+    firstName: String!,
+    lastName: String!,
+    language: String!,
+    country: String!,
     email: String!,
     password: String!,
   }
   type UserAuthenticated {
-    name: String!,
+    firstName: String!,
+    lastName: String!,
+    language: String!,
+    country: String!,
     email: String!,
-    token: String!,
+    password: String!,
   }
-  input UserLogin {
+  input Credentials {
     email: String!,
     password: String!,
   }
   type Query {
     alive: String!
-    getUserByEmail(email: String!): User
   }
   type Mutation {
     sigupUser(userInput: UserInput!): UserAuthenticated
-    login(userInput: UserLogin!): UserAuthenticated
+    login(credentials: Credentials!): UserAuthenticated
   }
 `;
 
@@ -46,25 +46,17 @@ export const resolvers = {
     alive() {
       return 'I am alive';
     },
-
-    async getUserByEmail(_: any, { email }: { email: String }) {
-      const result = await User.findOne<TUser>({ email }).exec();
-      if (!result) {
-        return null;
-      }
-      return { name: result.name, email: result.email, password: result.password };
-    },
   },
 
   Mutation: {
     async sigupUser(
       _: any,
       {
-        userInput: { name, email, password },
-      }: { userInput: { name: string; email: string; password: string } },
+        userInput: { firstName, lastName, country, language, email, password },
+      }: { userInput: TUser },
       context: ApolloServerContext
-    ) {
-      const { req, res } = context;
+    ): Promise<TUser> {
+      const { req: _req, res } = context;
       const existingUser = await User.findOne<TUser>({ email }).exec();
       if (existingUser) {
         throw new GraphQLError('User already exists', {
@@ -73,14 +65,17 @@ export const resolvers = {
       }
 
       try {
-        console.log('newUser NOW!!!!');
-        const newUser = await User.create<TUser>({ name, email, password });
-        console.log('newUser', newUser.password);
-        const token = setToken(newUser, res);
-        console.log('token', token);
-        return { name: newUser.name, email: newUser.email, token };
+        const newUser = await User.create<TUser>({
+          firstName,
+          lastName,
+          country,
+          language,
+          email,
+          password,
+        });
+        setToken(newUser, res);
+        return newUser;
       } catch (err: any) {
-        console.log('err.stack', err.stack);
         throw new GraphQLError('Sign-up user error', {
           extensions: { code: 'SIGUN_UP_ERROR', message: err.message },
         });
@@ -89,12 +84,12 @@ export const resolvers = {
 
     async login(
       _: any,
-      { userInput: { email, password } }: { userInput: { email: string; password: string } },
+      { credentials: { email, password } }: { credentials: { email: string; password: string } },
       context: ApolloServerContext
-    ) {
-      const { req, res } = context;
+    ): Promise<TUser> {
+      console.log('LOGIN with email, password', email, password);
+      const { req: _req, res } = context;
       const user = await User.findOne<TUser>({ email }).exec();
-      console.log('user DB', user);
       if (!user) {
         throw new GraphQLError('User does not exist', {
           extensions: { code: 'USER_NOT_EXIST', email },
@@ -106,13 +101,14 @@ export const resolvers = {
           extensions: { code: 'USER_INVALID_USERNAME_PASSWORD', email },
         });
       }
-      const token = setToken(user, res);
-      return { name: user.name, email: user.email, token };
+      setToken(user, res);
+      console.log('LOGIN OK', user.firstName);
+      return user;
     },
   },
 };
 
-const setToken = (user: TUser, res: any) => {
+const setToken = (user: TUser, res: any): void => {
   const token = jwt.sign({ id: user._id }, PRIVATE_KEY, {
     expiresIn: TOKEN_EXPIRES_MS,
     algorithm: 'RS256',
@@ -124,5 +120,4 @@ const setToken = (user: TUser, res: any) => {
   //   sameSite: 'strict',
   //   secure: process.env.NODE_ENV === 'production', // HTTPS
   // });
-  return token;
 };

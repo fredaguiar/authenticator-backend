@@ -1,29 +1,25 @@
 import mongoose, { Types } from 'mongoose';
 import bcrypt from 'bcrypt';
 
+export type Country = 'BR' | 'USA';
+
 export type TUser = {
-  name: string;
+  firstName: string;
+  lastName: string;
+  language: string;
+  country: Country;
   email: string;
   password: string;
   _id?: Types.ObjectId;
 };
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    minLength: 1,
-  },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  language: { type: String, required: true },
+  country: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true, minLength: 1 },
 });
 
 userSchema.pre('save', async function (next, err) {
