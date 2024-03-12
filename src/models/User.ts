@@ -9,7 +9,11 @@ export type TUser = {
   language: string;
   country: Country;
   email: string;
-  password: string;
+  password?: string;
+  token?: string;
+  emailVerified: boolean;
+  mobileVerified: boolean;
+  mobileVerifyCode?: number;
   _id?: Types.ObjectId;
 };
 
@@ -20,6 +24,10 @@ const userSchema = new mongoose.Schema({
   country: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
   password: { type: String, required: true, minLength: 1 },
+  emailVerified: { type: Boolean, required: true, default: false },
+  mobileVerified: { type: Boolean, required: true, default: false },
+  mobileVerifyCode: { type: Number, required: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
 userSchema.pre('save', async function (next, err) {

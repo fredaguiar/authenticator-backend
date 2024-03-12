@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import { typeDefs, resolvers, ApolloServerContext } from './graphql/userGql';
+import { verifyToken } from './utils/JwtUtil';
+import { GraphQLError } from 'graphql';
 
 dotenv.config();
 const PORT: number = parseInt(process.env.PORT as string, 10);
@@ -34,9 +36,26 @@ const server = new ApolloServer<ApolloServerContext>({
     '/graphql',
     // cors<cors.CorsRequest>({ origin: '*' }),
     express.json(),
-    cookieParser(),
+    cookieParser(), // TODO: may not be necessary
     expressMiddleware(server, {
-      context: async ({ req, res }: ApolloServerContext) => ({ req, res }),
+      context: async ({ req, res }: { req: any; res: any }): Promise<ApolloServerContext> => {
+        let userId = null;
+        if (req.headers.authorization) {
+          const authToken = req.headers.authorization.substring(7).trim();
+          console.log('req.headers.authorization Bearer', authToken);
+          try {
+            const decoded = authToken ? verifyToken(authToken) : null;
+            console.log('>>>>>>>>>>>>>>>>>> decoded', decoded);
+            userId = decoded?.id;
+          } catch (err: any) {
+            console.log('req.headers.authorization Bearer', err.stack);
+            throw new GraphQLError('User is not authenticated', {
+              extensions: { code: 'UNAUTHENTICATED', http: { status: 401 } },
+            });
+          }
+        }
+        return { req, res, userId };
+      },
     })
   );
 

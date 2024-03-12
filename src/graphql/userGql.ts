@@ -1,15 +1,10 @@
 import { GraphQLError } from 'graphql';
 import bcrypt from 'bcrypt';
-import fs from 'fs';
-import jwt from 'jsonwebtoken';
+import { addToken } from '../utils/JwtUtil';
 import User, { TUser } from '../models/User';
+import { Document } from 'mongoose';
 
-const TOKEN_EXPIRES_MS = 60 * 60 * 1000; // 1hr
-export const COOKIE_NAME = 'jid'; // 1hr
-export const PRIVATE_KEY = fs.readFileSync('keys/rsa.ppk', 'utf-8');
-export const PUBLIC_KEY = fs.readFileSync('keys/rsa.pub', 'utf-8');
-
-export type ApolloServerContext = { req: any; res: any };
+export type ApolloServerContext = { req: any; res: any; userId: string | null };
 
 export const typeDefs = `#graphql
   input UserInput {
@@ -26,7 +21,9 @@ export const typeDefs = `#graphql
     language: String!,
     country: String!,
     email: String!,
-    password: String!,
+    token: String!,
+    emailVerified: Boolean!,
+    mobileVerified: Boolean!,
   }
   input Credentials {
     email: String!,
@@ -38,6 +35,7 @@ export const typeDefs = `#graphql
   type Mutation {
     sigupUser(userInput: UserInput!): UserAuthenticated
     login(credentials: Credentials!): UserAuthenticated
+    confirmMobile(code: Int!): UserAuthenticated
   }
 `;
 
@@ -56,7 +54,8 @@ export const resolvers = {
       }: { userInput: TUser },
       context: ApolloServerContext
     ): Promise<TUser> {
-      const { req: _req, res } = context;
+      const { userId } = context;
+      console.log('sigupUser email', email);
       const existingUser = await User.findOne<TUser>({ email }).exec();
       if (existingUser) {
         throw new GraphQLError('User already exists', {
@@ -64,6 +63,7 @@ export const resolvers = {
         });
       }
 
+      const verifyCode = generateVerifyCode();
       try {
         const newUser = await User.create<TUser>({
           firstName,
@@ -72,14 +72,40 @@ export const resolvers = {
           language,
           email,
           password,
+          emailVerified: false,
+          mobileVerified: false,
+          mobileVerifyCode: verifyCode,
         });
-        setToken(newUser, res);
+        addToken(newUser);
+        delete newUser.password;
+        newUser;
         return newUser;
       } catch (err: any) {
         throw new GraphQLError('Sign-up user error', {
           extensions: { code: 'SIGUN_UP_ERROR', message: err.message },
         });
       }
+    },
+
+    async confirmMobile(_: any, code: number, context: ApolloServerContext): Promise<TUser> {
+      const { userId } = context;
+      console.log('confirmMobile userId', userId);
+      const doc = await User.findById<Document & TUser>(userId);
+      if (!doc) {
+        throw new GraphQLError('User not found', {
+          extensions: { code: 'USER_NOT_FOUND' },
+        });
+      }
+      if (doc.mobileVerifyCode === code) {
+        doc.mobileVerifyCode = undefined;
+        doc.mobileVerified = true;
+        const user = await doc.save();
+        await user.save();
+        return user;
+      }
+      throw new GraphQLError('Invalid confirmation code', {
+        extensions: { code: 'USER_INVALID_CONFIRMATION_CODE' },
+      });
     },
 
     async login(
@@ -95,29 +121,28 @@ export const resolvers = {
           extensions: { code: 'USER_NOT_EXIST', email },
         });
       }
+      if (!user.password) {
+        throw new GraphQLError('Unexpected Error', {
+          extensions: { code: 'PASSWORD_NOT_EXIST', email },
+        });
+      }
       const auth = await bcrypt.compare(password, user.password);
       if (!auth) {
         throw new GraphQLError('Invalid username or password', {
           extensions: { code: 'USER_INVALID_USERNAME_PASSWORD', email },
         });
       }
-      setToken(user, res);
-      console.log('LOGIN OK', user.firstName);
+      delete user.password;
+      addToken(user);
       return user;
     },
   },
 };
 
-const setToken = (user: TUser, res: any): void => {
-  const token = jwt.sign({ id: user._id }, PRIVATE_KEY, {
-    expiresIn: TOKEN_EXPIRES_MS,
-    algorithm: 'RS256',
-  });
-  res.setHeader('Authorization', `Bearer ${token}`);
+const generateVerifyCode = (): number => {
+  const num = Math.floor(Math.random() * 100000)
+    .toString()
+    .padEnd(5, '0');
 
-  // res.cookie(COOKIE_NAME, token, {
-  //   httpOnly: true,
-  //   sameSite: 'strict',
-  //   secure: process.env.NODE_ENV === 'production', // HTTPS
-  // });
+  return parseInt(num, 10);
 };
