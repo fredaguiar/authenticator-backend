@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
   emailVerified: { type: Boolean, required: true, default: false },
   mobileVerified: { type: Boolean, required: true, default: false },
   mobileVerifyCode: { type: Number, required: false },
-  introductionViewed: { type: Boolean, default: false },
+  introductionViewed: { type: Boolean, default: false, required: true },
   createdAt: { type: Date, default: Date.now },
 });
 

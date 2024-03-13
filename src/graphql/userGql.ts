@@ -28,7 +28,7 @@ export const typeDefs = `#graphql
     token: String,
     emailVerified: Boolean!,
     mobileVerified: Boolean!,
-    introductionViewed: Boolean,
+    introductionViewed: Boolean!,
   }
   input Credentials {
     email: String!,
@@ -60,8 +60,9 @@ export const resolvers = {
       }: { userInput: TUser },
       context: ApolloServerContext
     ): Promise<TUser> {
+      console.log('sigupUser email: context', context);
       const { userId } = context;
-      console.log('sigupUser email', email);
+      console.log('sigupUser email/userId', email, userId);
       const existingUser = await User.findOne<TUser>({ email }).exec();
       if (existingUser) {
         throw new GraphQLError('User already exists', {

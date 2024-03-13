@@ -40,6 +40,7 @@ const server = new ApolloServer<ApolloServerContext>({
     expressMiddleware(server, {
       context: async ({ req, res }: { req: any; res: any }): Promise<ApolloServerContext> => {
         let userId = null;
+        console.log('expressMiddleware CONTEXT');
         if (req.headers.authorization) {
           const authToken = req.headers.authorization.substring(7).trim();
           console.log('req.headers.authorization:::', authToken);
@@ -54,6 +55,7 @@ const server = new ApolloServer<ApolloServerContext>({
             });
           }
         }
+        console.log('>>>>>>>>>>>>>>>>>> userId', userId);
         return { req, res, userId };
       },
     })
