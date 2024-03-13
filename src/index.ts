@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import { typeDefs, resolvers, ApolloServerContext } from './graphql/userGql';
-import { verifyToken } from './utils/JwtUtil';
+import { addToken, verifyToken } from './utils/JwtUtil';
 import { GraphQLError } from 'graphql';
 
 dotenv.config();
@@ -42,7 +42,7 @@ const server = new ApolloServer<ApolloServerContext>({
         let userId = null;
         if (req.headers.authorization) {
           const authToken = req.headers.authorization.substring(7).trim();
-          console.log('req.headers.authorization Bearer', authToken);
+          console.log('req.headers.authorization:::', authToken);
           try {
             const decoded = authToken ? verifyToken(authToken) : null;
             console.log('>>>>>>>>>>>>>>>>>> decoded', decoded);

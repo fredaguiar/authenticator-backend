@@ -13,6 +13,8 @@ export const typeDefs = `#graphql
     language: String!,
     country: String!,
     email: String!,
+    phoneCountry: String!,
+    phone: String!,
     password: String!,
   }
   type UserAuthenticated {
@@ -21,9 +23,12 @@ export const typeDefs = `#graphql
     language: String!,
     country: String!,
     email: String!,
-    token: String!,
+    phoneCountry: String!,
+    phone: String!,
+    token: String,
     emailVerified: Boolean!,
     mobileVerified: Boolean!,
+    introductionViewed: Boolean,
   }
   input Credentials {
     email: String!,
@@ -36,6 +41,7 @@ export const typeDefs = `#graphql
     sigupUser(userInput: UserInput!): UserAuthenticated
     login(credentials: Credentials!): UserAuthenticated
     confirmMobile(code: Int!): UserAuthenticated
+    introViewed(viewed: Boolean!): Boolean
   }
 `;
 
@@ -50,7 +56,7 @@ export const resolvers = {
     async sigupUser(
       _: any,
       {
-        userInput: { firstName, lastName, country, language, email, password },
+        userInput: { firstName, lastName, country, language, email, phoneCountry, phone, password },
       }: { userInput: TUser },
       context: ApolloServerContext
     ): Promise<TUser> {
@@ -71,10 +77,13 @@ export const resolvers = {
           country,
           language,
           email,
+          phoneCountry,
+          phone,
           password,
           emailVerified: false,
           mobileVerified: false,
           mobileVerifyCode: verifyCode,
+          introductionViewed: false,
         });
         addToken(newUser);
         delete newUser.password;
@@ -87,25 +96,45 @@ export const resolvers = {
       }
     },
 
-    async confirmMobile(_: any, code: number, context: ApolloServerContext): Promise<TUser> {
+    async confirmMobile(
+      _: any,
+      { code }: { code: number },
+      context: ApolloServerContext
+    ): Promise<TUser> {
       const { userId } = context;
-      console.log('confirmMobile userId', userId);
       const doc = await User.findById<Document & TUser>(userId);
       if (!doc) {
         throw new GraphQLError('User not found', {
           extensions: { code: 'USER_NOT_FOUND' },
         });
       }
-      if (doc.mobileVerifyCode === code) {
-        doc.mobileVerifyCode = undefined;
-        doc.mobileVerified = true;
-        const user = await doc.save();
-        await user.save();
-        return user;
+      if (doc.mobileVerifyCode !== code) {
+        throw new GraphQLError('Invalid confirmation code', {
+          extensions: { code: 'USER_INVALID_CONFIRMATION_CODE' },
+        });
       }
-      throw new GraphQLError('Invalid confirmation code', {
-        extensions: { code: 'USER_INVALID_CONFIRMATION_CODE' },
-      });
+      doc.mobileVerifyCode = undefined;
+      doc.mobileVerified = true;
+      const user = await doc.save();
+      addToken(user);
+      return user;
+    },
+
+    async introViewed(
+      _: any,
+      { viewed }: { viewed: boolean },
+      context: ApolloServerContext
+    ): Promise<boolean> {
+      const { userId } = context;
+      const doc = await User.findById<Document & TUser>(userId);
+      if (!doc) {
+        throw new GraphQLError('User not found', {
+          extensions: { code: 'USER_NOT_FOUND' },
+        });
+      }
+      doc.introductionViewed = true;
+      await doc.save();
+      return true;
     },
 
     async login(

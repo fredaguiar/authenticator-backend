@@ -13,6 +13,8 @@ A **React Native** authentication mobile app
 
 ## RSA
 
+(not working though)
+
 - Open **PuTTY Key Generator**
 - Select RSA
 - Number of bits should be 3072 bits or higher
