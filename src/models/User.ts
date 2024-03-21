@@ -1,9 +1,11 @@
 import mongoose, { Types } from 'mongoose';
 import bcrypt from 'bcrypt';
+import { safeSchema, TSafe } from './Safe';
 
 export type Country = 'BR' | 'USA';
 
 export type TUser = {
+  _id?: Types.ObjectId;
   firstName: string;
   lastName: string;
   language: string;
@@ -17,7 +19,7 @@ export type TUser = {
   mobileVerified: boolean;
   mobileVerifyCode?: number;
   introductionViewed?: boolean;
-  _id?: Types.ObjectId;
+  safes: Array<TSafe>;
 };
 
 const userSchema = new mongoose.Schema({
@@ -34,6 +36,7 @@ const userSchema = new mongoose.Schema({
   mobileVerifyCode: { type: Number, required: false },
   introductionViewed: { type: Boolean, default: false, required: true },
   createdAt: { type: Date, default: Date.now },
+  safes: [safeSchema],
 });
 
 userSchema.pre('save', async function (next, err) {

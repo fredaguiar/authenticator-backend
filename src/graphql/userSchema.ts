@@ -2,11 +2,11 @@ import { GraphQLError } from 'graphql';
 import bcrypt from 'bcrypt';
 import { addToken } from '../utils/JwtUtil';
 import User, { TUser } from '../models/User';
+import { TSafe } from '../models/Safe';
 import { Document } from 'mongoose';
+import { ApolloServerContext } from '../typings';
 
-export type ApolloServerContext = { req: any; res: any; userId: string | null };
-
-export const typeDefs = `#graphql
+export const userTypeDefs = `#graphql
   input UserInput {
     firstName: String!,
     lastName: String!,
@@ -29,6 +29,7 @@ export const typeDefs = `#graphql
     emailVerified: Boolean!,
     mobileVerified: Boolean!,
     introductionViewed: Boolean!,
+    safes: [SafeItem]
   }
   input Credentials {
     email: String!,
@@ -45,7 +46,7 @@ export const typeDefs = `#graphql
   }
 `;
 
-export const resolvers = {
+export const userResolvers = {
   Query: {
     alive() {
       return 'I am alive';
@@ -72,6 +73,7 @@ export const resolvers = {
 
       const verifyCode = generateVerifyCode();
       try {
+        const safes: TSafe[] = [{ name: 'Personal Documents' }, { name: 'Friends and family' }];
         const newUser = await User.create<TUser>({
           firstName,
           lastName,
@@ -85,6 +87,7 @@ export const resolvers = {
           mobileVerified: false,
           mobileVerifyCode: verifyCode,
           introductionViewed: false,
+          safes,
         });
         addToken(newUser);
         delete newUser.password;

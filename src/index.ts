@@ -4,12 +4,14 @@ import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import express from 'express';
 import http from 'http';
-import cors from 'cors';
+// import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
-import { typeDefs, resolvers, ApolloServerContext } from './graphql/userGql';
-import { addToken, verifyToken } from './utils/JwtUtil';
+import { ApolloServerContext } from './typings';
+import typeDefs from './graphql/typeDefs';
+import resolvers from './graphql/resolvers';
+import { verifyToken } from './utils/JwtUtil';
 import { GraphQLError } from 'graphql';
 
 dotenv.config();
