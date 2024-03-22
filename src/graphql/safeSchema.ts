@@ -10,6 +10,7 @@ export const safeTypeDefs = `#graphql
   }
   type SafeItem {
     name: String!,
+    _id: ID!,
   }
   type Query {
     getSafe: String!
