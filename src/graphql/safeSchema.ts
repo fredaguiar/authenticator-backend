@@ -8,7 +8,7 @@ export const safeTypeDefs = `#graphql
   input SafeInput {
     name: String!,
   }
-  type SafeItem {
+  type SafeResult {
     name: String!,
     _id: ID!,
   }
@@ -16,7 +16,7 @@ export const safeTypeDefs = `#graphql
     getSafe: String!
   }
   type Mutation {
-    createSafe(safeInput: SafeInput!): SafeItem
+    createSafe(safeInput: SafeInput!): SafeResult
   }
 `;
 
@@ -43,16 +43,14 @@ export const safeResolvers = {
       }
       const safe = new Safe({ name });
       user.safes?.push(safe);
-      await user.save();
+      try {
+        await user.save();
+      } catch (err: any) {
+        throw new GraphQLError('Create safe error', {
+          extensions: { code: 'CREATE_SAFE_ERROR', message: err.message },
+        });
+      }
       return safe;
     },
   },
-};
-
-const generateVerifyCode = (): number => {
-  const num = Math.floor(Math.random() * 100000)
-    .toString()
-    .padEnd(5, '0');
-
-  return parseInt(num, 10);
 };

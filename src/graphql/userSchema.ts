@@ -29,7 +29,7 @@ export const userTypeDefs = `#graphql
     emailVerified: Boolean!,
     mobileVerified: Boolean!,
     introductionViewed: Boolean!,
-    safes: [SafeItem]
+    safes: [SafeResult]
   }
   input Credentials {
     email: String!,
@@ -45,6 +45,10 @@ export const userTypeDefs = `#graphql
     introViewed(viewed: Boolean!): Boolean
   }
 `;
+
+const newSafe = (name: string): TSafe => {
+  return { name, items: [] };
+};
 
 export const userResolvers = {
   Query: {
@@ -73,7 +77,7 @@ export const userResolvers = {
 
       const verifyCode = generateVerifyCode();
       try {
-        const safes: TSafe[] = [{ name: 'Personal Documents' }, { name: 'Friends and family' }];
+        const safes: TSafe[] = [newSafe('Personal Documents'), newSafe('Friends and family')];
         const newUser = await User.create<TUser>({
           firstName,
           lastName,
