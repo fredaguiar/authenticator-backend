@@ -2,6 +2,7 @@ import mongoose, { Types } from 'mongoose';
 
 export type TItem = {
   name: string;
+  safeId: string;
   type: 'photos' | 'videos';
   _id?: Types.ObjectId;
 };

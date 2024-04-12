@@ -7,6 +7,7 @@ import User, { TUser } from '../models/User';
 export const itemTypeDefs = `#graphql
   input ItemInput {
     name: String!,
+    safeId: String!,
     type: String!,
   }
   type ItemResult {
@@ -32,11 +33,11 @@ export const itemResolvers = {
   Mutation: {
     async addItem(
       _: any,
-      { ItemInput: { name, type, safeId } }: { ItemInput: TItem & { safeId: string } },
+      { ItemInput: { name, type, safeId } }: { ItemInput: TItem },
       context: ApolloServerContext
     ): Promise<TItem> {
       const { userId } = context;
-      console.log('addItem userId, safeId', userId, safeId);
+      console.log('addItem userId, name, safeId, type', userId, name, safeId, type);
 
       const user = await User.findOne<Document & TUser>(
         { _id: userId, 'safes._id': safeId },
@@ -50,7 +51,7 @@ export const itemResolvers = {
       }
 
       const item = new Item({ name, type });
-      if (type === 'photos') user.safes[0]?.items.push(item);
+      user.safes[0]?.items.push(item);
 
       try {
         await user.save();
